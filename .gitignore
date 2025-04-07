@@ -1,0 +1,26 @@
+# General Python
+*.pyc
+*.pyo
+__pycache__
+venv/            # Virtual environment for Flask
+
+# Flask specific
+instance/
+*.db
+*.sqlite3
+
+# React specific
+node_modules/    # React dependencies
+build/           # Production build folder for React
+
+# OS-specific files
+.DS_Store        # macOS Finder system file
+Thumbs.db        # Windows system file
+
+# Log files
+*.log
+
+# IDE files
+.vscode/         # VS Code settings folder
+.idea/           # JetBrains IDE settings
+*.sublime-workspace  # Sublime Text workspace files
