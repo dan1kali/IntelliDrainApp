@@ -8,6 +8,7 @@ venv/            # Virtual environment for Flask
 instance/
 *.db
 *.sqlite3
+frontend/.flaskenv
 
 # React specific
 node_modules/    # React dependencies
