@@ -48,14 +48,7 @@ def test_connect():
         if thread is None:
             thread = socketio.start_background_task(background_thread)
 
-""" @socketio.on('connect')
-def test_connect():
-    print('Client connected')
-    data = get_sensor_data()  # Get sample data
-    print(f"Emitting data immediately: {data}")  # Log data to ensure it's being emitted
-    socketio.emit('new_data', data)  # Emit data immediately """
 
- 
 # Handle client disconnection
 @socketio.on('disconnect')
 def test_disconnect():
