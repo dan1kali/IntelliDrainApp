@@ -30,8 +30,8 @@ def get_fluid_tracking_values():
     return saline_volume, drainage_volume
 
 def get_flush_initiation_times():
-    # INSERT FUTURE CODE HERE
-    return round(random.random() * 100, 2)
+    now = datetime.now()
+    return now.strftime("%m/%d/%Y %H:%M:%S")
 
 # Put data all together in an array
 def get_data():

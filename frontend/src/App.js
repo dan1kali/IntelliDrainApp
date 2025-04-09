@@ -78,8 +78,14 @@ var socket = io('http://localhost:5000', {
 
 
 function App() {
-  const [data, setData] = useState([]);
-  const [labels, setLabels] = useState([]);
+  const [data, setData] = useState({
+    salineVolumes: [],
+    drainageVolumes: [],
+    flushTimes: [],
+    sensorValues: [],  // Make sure this is an array
+  });
+    const [labels, setLabels] = useState([]);
+  const [isStarted, setIsStarted] = useState(false);
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -92,13 +98,43 @@ function App() {
 
     socket.on('new_data', (receivedData) => {
       console.log('Received data:', receivedData);
-      setData((prevData) => [...prevData, receivedData.sensor_value]);
+      setData((prevData) => ({
+        ...prevData, // Retain the previous data
+        salineVolumes: [...prevData.salineVolumes, receivedData.saline_volume], // Append the new sensor value to the array
+        drainageVolumes: [...prevData.drainageVolumes, receivedData.drainage_volume], // Append the new sensor value to the array
+        flushTimes: [...prevData.flushTimes, receivedData.flush_times],
+        sensorValues: [...prevData.sensorValues, receivedData.sensor_value], // Append the new sensor value to the array
+      }));
+      
       setLabels((prevLabels) => [
         ...prevLabels,
         new Date(receivedData.date).toLocaleTimeString(),
       ]);
     });
 
+
+    /* For debugging */
+    /* socket.on('new_data', (receivedData) => {
+      console.log('Received data:', receivedData);
+      setData((prevData) => {
+        const newData = {
+          ...prevData,
+          salineVolume: receivedData.saline_volume,
+          drainageVolume: receivedData.drainage_volume,
+          flushTimes: [...prevData.flushTimes, receivedData.flush_times],
+          sensorValues: [...prevData.sensorValues, receivedData.sensor_value],
+        };
+        console.log('Updated data:', newData);  // Check the updated state here
+        return newData;
+      });
+      
+      setLabels((prevLabels) => [
+        ...prevLabels,
+        new Date(receivedData.date).toLocaleTimeString(),
+      ]);
+    }); */
+    
+    
     return () => {
       socket.off('new_data');
       socket.off('connect');
@@ -106,12 +142,27 @@ function App() {
     };
   }, []);
 
+  const handleStart = () => {
+    setIsStarted(true);
+    // Add your start logic here (like initiating data fetching or starting a process)
+  };
+
+  const handleStop = () => {
+    setIsStarted(false);
+    // Add your stop logic here (like stopping data fetching or halting a process)
+  };
+
+  // Handle Download Button click
+  const handleDownload = () => {
+    // Add your download logic here, like generating a file to download
+  };
+
   const chartData = {
     labels: labels,
     datasets: [
       {
         label: 'Occlusion Sensor Value',
-        data: data,
+        data: data.sensorValues,
         borderColor: 'rgb(192, 47, 69)',  // Color of the line
         backgroundColor: 'rgba(255, 182, 193, 0.4)',  // Color of the points
         fill: true,
@@ -126,7 +177,7 @@ function App() {
       padding: {
         top: 20,
         left: 30,
-        right: 30,
+        right: 0,
         bottom: 20,
       },
     },
@@ -175,8 +226,55 @@ function App() {
   return (
     <div className="App">
       <h1>Arduino Data</h1>
-      <div className="chart-container">
-        <Line data={chartData} options={chartOptions} />
+
+      <div className="layoutContainer">
+
+        <div className="leftColumn">
+
+          <div className="controlsContainer">
+            <label htmlFor="device-select">Select Device: </label>
+            <select id="device-select">
+              <option value="device1">Device 1</option>
+              <option value="device2">Device 2</option>
+              <option value="device3">Device 3</option>
+            </select>
+          </div>
+
+          <div className="dataDisplay">
+            <h3>Fluid Tracking</h3>
+            <p>Total Drainage: {data.drainageVolumes[data.drainageVolumes.length - 1]}</p>
+            <p>Total Flush: {data.salineVolumes[data.salineVolumes.length - 1]}</p>
+            <p>Net Volume Drained: {(data.drainageVolumes[data.drainageVolumes.length - 1] - data.salineVolumes[data.salineVolumes.length - 1]).toFixed(2)}</p>
+            </div>
+
+            <div className="scrollingData">
+            <h3>Flushing Timestamps</h3>
+            {data.flushTimes.map((flushTime, index) => (
+              /* <p key={index}>Flush time: {new Date(flushTime).toLocaleTimeString()}</p> */
+              <p key={index}> {flushTime}</p>
+            ))}
+          </div>
+
+
+          <div className="controlsContainer">
+            <button onClick={handleStart} disabled={isStarted}>Start</button>
+            <button onClick={handleStop} disabled={!isStarted}>Stop</button>
+          </div>
+
+        </div>
+
+
+        <div className="rightColumn">
+
+          <div className="chartContainer">
+            <h3>Sensor Output</h3>
+            <Line data={chartData} options={chartOptions} />
+          </div>
+
+          <button className="downloadButton" onClick={handleDownload}>
+            Download Data
+          </button>
+        </div>
       </div>
     </div>
   );
