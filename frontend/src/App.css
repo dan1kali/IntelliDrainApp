@@ -1,10 +1,4 @@
-/* .App {
-  text-align: center;
-}
- */
-
-
- .App {
+.App {
   text-align: center;
   background-color: #f5e4e6;  /* Light pink background */
   min-height: 100vh;  /* Full height of the viewport */
@@ -16,66 +10,96 @@
   padding-top: 0; /* Remove any top padding */
 }
 
-/* .AppHeader {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-} */
-
 .AppLink {
   color: #61dafb;
 }
 
+h1 {
+  text-align: center;
+}
 
-/* Main layout container (two-column) */
 .layoutContainer {
   display: flex;
-  justify-content: space-between; /* Space between left and right columns */
+  justify-content: space-between; /* Space between columns */
   width: 100%;
-  max-width: 1200px;  /* Max width to prevent excessive stretching */
-  margin-top: 20px;  /* Space from header */
 }
 
 .leftColumn {
-  flex: 1;  /* This will take up 50% of the width */
-  margin-right: 50px; /* Space between the left and right columns */
+  flex: 1;  /* This will take up an equal portion of the width */
+  margin-right: 20px; /* Space between the left and center columns */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 
+.centerColumn {
+  flex: 1;  /* This will take up an equal portion of the width */
+  margin-right: 20px; /* Space between the left and center columns */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
 .rightColumn {
-  flex: 1;  /* This will take up 50% of the width */
+  flex: 2;  /* This will take up an equal portion of the width */
   display: flex;
   flex-direction: column;
   justify-content: flex-start; /* Align items to the top of the column */
   align-items: center;         /* Center items horizontally */
-  height: 100%;                /* Full height of the parent container */
-  width: 100%;  /* Make sure it fills the available space */
-  padding: 20px;               /* Add some padding around */
 }
 
-/* Chart container styles */
 .chartContainer {
-  width: 100%;            /* Make the chart container take up full width */
-  height: 50vh;           /* Set the height to be 50% of the viewport height */
-  margin-top: 40px;       /* Space between chart and other elements */
+  width: 600px;            /* Make the chart container take up full width */
+  height: 400px;           /* Set the height to be 50% of the viewport height */
   padding: 30px;          /* Padding inside the chart container */
   background-color: white; /* White background for the chart area */
   display: flex;           /* Flexbox for the chart to make it responsive */
   flex-direction: column;  /* Stack elements inside the chart container */
   justify-content: center; /* Center the content inside the chart container */
   border: 1px solid #ccc;
-  background-color: #fff;
-  border-radius: 5px;
+  border-radius: 30px;
 }
 
-/* Scrolling data section styles */
+.patientDataContainer {
+  width: 100%;
+  height: 50%; /* Adjust as needed */
+  padding: 30px; /* Padding inside the chart container */
+  background-color: white; /* White background for the chart area */
+  display: flex;
+  flex-direction: column; /* Stack elements inside the chart container */
+  justify-content: center; /* Center the content inside the chart container */
+  border: 1px solid #ccc;
+  border-radius: 30px;
+  box-sizing: border-box; /* Prevent padding from affecting the width */
+}
+
+.formGroup {
+  display: flex;          /* Display label and input field inline */
+  align-items: center;    /* Vertically align the label and input fields */
+  margin-bottom: 15px;    /* Space between form groups */
+}
+
+.formGroup label {
+  width: 100px;           /* Fixed width for labels */
+  margin-right: 10px;     /* Space between label and input field */
+  text-align: right;      /* Right align the text in the label */
+}
+
+input, select, textarea {
+  width: 100%;            /* Ensure the input and textarea fields take up full width */
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box; /* Include padding and border in the total width calculation */
+}
+
+textarea {
+  height: 100px;          /* Set height for the notes textarea */
+}
+
+
+
 .scrollingData {
   width: 100%;
   height: 200px;
@@ -85,7 +109,7 @@
   padding: 10px;
   box-sizing: border-box;
   background-color: #fff;
-  border-radius: 5px;
+  border-radius: 30px;
 }
 
 .dataDisplay {
@@ -96,7 +120,7 @@
   padding: 10px;
   box-sizing: border-box;
   background-color: #fff;
-  border-radius: 5px;
+  border-radius: 30px;
 }
 
 button {
@@ -106,20 +130,18 @@ button {
   cursor: pointer;
 }
 
-/* Dropdown and buttons container */
 .controlsContainer {
-  margin-bottom: 20px;
+  margin-top: 20px;
   text-align: middle;
 }
 
-/* Styling for the download button */
 .downloadButton {
   margin-top: 20px;
   padding: 10px 20px;
   background-color: #61dafb;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 30px;
   cursor: pointer;
 }
 

@@ -7,7 +7,6 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-
 var socket = io('http://localhost:5000', {
   transports: ['websocket'],  // Use WebSocket transport for faster and more stable communication
 });
@@ -22,9 +21,15 @@ function App() {
   });
 
   const [timestamps, setTimestamps] = useState([]);
-  const [isStarted, setIsStarted] = useState(false);
+  const [status, setStatus] = useState('stopped'); // Track the status (stopped, started, paused)
   const [timeRange, setTimeRange] = useState('all'); // '5min', '1hr', '24hr', 'all'
 
+  // State for Patient Data
+  const [patientData, setPatientData] = useState({
+    name: '',
+    sex: '',
+    notes: '',
+  });
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -59,15 +64,19 @@ function App() {
   }, []);
 
   const handleStart = () => {
-    setIsStarted(true);
-    // Add your start logic here (like initiating data fetching or starting a process)
+    setStatus('started');  // Update status to 'started'
+    // Add any start logic here (like initiating data fetching or starting a process)
+  };
+
+  const handlePause = () => {
+    setStatus('paused');  // Update status to 'paused'
+    // Add any pause logic here (like pausing data fetching or halting a process)
   };
 
   const handleStop = () => {
-    setIsStarted(false);
-    // Add your stop logic here (like stopping data fetching or halting a process)
+    setStatus('stopped');  // Update status to 'stopped'
+    // Add any stop logic here (like stopping data fetching or halting a process)
   };
-
   // Handle Download Button click
   const handleDownload = () => {
     // Add your download logic here, like generating a file to download
@@ -108,7 +117,6 @@ function App() {
   };
   
 
-  
   const filteredData = getFilteredChartData();
 
   const chartData = {
@@ -126,14 +134,6 @@ function App() {
 
   const chartOptions = {
     responsive: true,
-    layout: {
-      padding: {
-        top: 20,
-        left: 30,
-        right: 0,
-        bottom: 20,
-      },
-    },
     scales: {
       x: {
         type: 'category',
@@ -175,13 +175,61 @@ function App() {
     },
   };
 
+  // Handle changes to patient data
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setPatientData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
   return (
     <div className="App">
-      <h1>Arduino Data</h1>
+      <h1>IntelliDrain Fluid Tracking</h1>
 
       <div className="layoutContainer">
 
         <div className="leftColumn">
+
+
+          <div className="patientDataContainer">
+            <h3>Patient Data</h3>
+            <div className="formGroup">
+              <label>Name: </label>
+              <input
+                type="text"
+                name="name"
+                value={patientData.name}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="formGroup">
+              <label>Sex: </label>
+              <select
+                name="sex"
+                value={patientData.sex}
+                onChange={handleInputChange}
+              >
+                <option value="">Select Sex</option>
+                <option value="male">M</option>
+                <option value="female">F</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="formGroup">
+
+              <label>Notes: </label>
+              <textarea
+                name="notes"
+                value={patientData.notes}
+                onChange={handleInputChange}
+              />
+            </div>
+              
+          </div>
 
           <div className="controlsContainer">
             <label htmlFor="device-select">Select Device: </label>
@@ -192,32 +240,41 @@ function App() {
             </select>
           </div>
 
+          <div className="controlsContainer">
+            <button onClick={handleStart} disabled={status === 'started'}>Start</button>
+            <button onClick={handlePause} disabled={status !== 'started'}>Pause</button>
+            <button onClick={handleStop} disabled={status === 'stopped'}>Stop</button>
+          </div>
+
+          <button className="downloadButton" onClick={handleDownload}>
+            Download Data
+          </button>
+        </div>
+
+        <div className="centerColumn">
           <div className="dataDisplay">
-            <h3>Fluid Tracking</h3>
+            <h3>Last 24 Hours</h3>
+            <p>Net Volume Drained: {(data.drainageVolumes[data.drainageVolumes.length - 1] - data.salineVolumes[data.salineVolumes.length - 1]).toFixed(2)}</p>
             <p>Total Drainage: {data.drainageVolumes[data.drainageVolumes.length - 1]}</p>
             <p>Total Flush: {data.salineVolumes[data.salineVolumes.length - 1]}</p>
-            <p>Net Volume Drained: {(data.drainageVolumes[data.drainageVolumes.length - 1] - data.salineVolumes[data.salineVolumes.length - 1]).toFixed(2)}</p>
-            </div>
+          </div>
 
-            <div className="scrollingData">
+          <div className="dataDisplay">
+            <h3>Cumulative to Date</h3>
+            <p>Net Volume Drained: {(data.drainageVolumes[data.drainageVolumes.length - 1] - data.salineVolumes[data.salineVolumes.length - 1]).toFixed(2)}</p>
+            <p>Total Drainage: {data.drainageVolumes[data.drainageVolumes.length - 1]}</p>
+            <p>Total Flush: {data.salineVolumes[data.salineVolumes.length - 1]}</p>
+          </div>
+
+          <div className="scrollingData">
             <h3>Flushing Timestamps</h3>
             {data.flushTimes.map((flushTime, index) => (
-              /* <p key={index}>Flush time: {new Date(flushTime).toLocaleTimeString()}</p> */
               <p key={index}> {flushTime}</p>
             ))}
           </div>
-
-
-          <div className="controlsContainer">
-            <button onClick={handleStart} disabled={isStarted}>Start</button>
-            <button onClick={handleStop} disabled={!isStarted}>Stop</button>
-          </div>
-
         </div>
 
-
         <div className="rightColumn">
-
           <div className="chartContainer">
             <h3>Sensor Output</h3>
             <Line data={chartData} options={chartOptions} />
@@ -229,15 +286,10 @@ function App() {
             <button onClick={() => setTimeRange('1hr')}>1 Hour</button>
             <button onClick={() => setTimeRange('5min')}>5 Min</button>
           </div>
-
-          <button className="downloadButton" onClick={handleDownload}>
-            Download Data
-          </button>
         </div>
       </div>
     </div>
   );
 }
-
 
 export default App;
