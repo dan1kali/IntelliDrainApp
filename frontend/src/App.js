@@ -20,8 +20,11 @@ function App() {
     flushTimes: [],
     sensorValues: [],  // Make sure this is an array
   });
-    const [labels, setLabels] = useState([]);
+
+  const [timestamps, setTimestamps] = useState([]);
   const [isStarted, setIsStarted] = useState(false);
+  const [timeRange, setTimeRange] = useState('all'); // '5min', '1hr', '24hr', 'all'
+
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -42,9 +45,9 @@ function App() {
         sensorValues: [...prevData.sensorValues, receivedData.sensor_value], // Append the new sensor value to the array
       }));
       
-      setLabels((prevLabels) => [
-        ...prevLabels,
-        new Date(receivedData.date).toLocaleTimeString(),
+      setTimestamps((prevTimestamps) => [
+        ...prevTimestamps,
+        new Date(receivedData.date),
       ]);
     });
 
@@ -70,14 +73,51 @@ function App() {
     // Add your download logic here, like generating a file to download
   };
 
+  const getFilteredChartData = () => {
+    const now = new Date();
+    const timeLimits = {
+      '5min': 5 * 60 * 1000,
+      '1hr': 60 * 60 * 1000,
+      '24hr': 24 * 60 * 60 * 1000,
+    };
+  
+    let filteredTimestamps = timestamps;
+    let filteredValues = data.sensorValues;
+  
+    if (timeRange !== 'all') {
+      const threshold = new Date(now.getTime() - timeLimits[timeRange]);
+  
+      // Filter based on actual timestamps
+      const filteredIndexes = timestamps
+        .map((timestamp, index) => (timestamp >= threshold ? index : null))
+        .filter((index) => index !== null);
+  
+      filteredTimestamps = filteredIndexes.map((index) => timestamps[index]);
+      filteredValues = filteredIndexes.map((index) => data.sensorValues[index]);
+    }
+  
+    // Format labels from filtered timestamps
+    const filteredLabels = filteredTimestamps.map((ts) =>
+      ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    );
+  
+    return {
+      labels: filteredLabels,
+      data: filteredValues,
+    };
+  };
+  
+
+  
+  const filteredData = getFilteredChartData();
+
   const chartData = {
-    labels: labels,
+    labels: filteredData.labels,
     datasets: [
       {
-        label: 'Occlusion Sensor Value',
-        data: data.sensorValues,
-        borderColor: 'rgb(192, 47, 69)',  // Color of the line
-        backgroundColor: 'rgba(255, 182, 193, 0.4)',  // Color of the points
+        data: filteredData.data,
+        borderColor: 'rgb(192, 47, 69)',
+        backgroundColor: 'rgba(255, 182, 193, 0.4)',
         fill: true,
         tension: 0.4,
       },
@@ -104,6 +144,7 @@ function App() {
         },
         ticks: {
           color: 'rgba(106, 90, 205, 1)',  // Tick mark color (purple)
+          maxTicksLimit: 10,
         },
         grid: {
           color: 'rgba(216, 191, 216, 0.5)',  // Grid lines lavender, transparent
@@ -125,9 +166,7 @@ function App() {
     },
     plugins: {
       legend: {
-        labels: {
-          color: 'rgba(106, 90, 205, 1)',  // Soft purple for legend text
-        },
+          display: false,  // Soft purple for legend text
       },
       tooltip: {
         titleColor: 'rgba(106, 90, 205, 1)',  // Soft purple for tooltip title
@@ -182,6 +221,13 @@ function App() {
           <div className="chartContainer">
             <h3>Sensor Output</h3>
             <Line data={chartData} options={chartOptions} />
+          </div>
+
+          <div className="timeRangeButtons">
+            <button onClick={() => setTimeRange('all')}>All Time</button>
+            <button onClick={() => setTimeRange('24hr')}>24 Hours</button>
+            <button onClick={() => setTimeRange('1hr')}>1 Hour</button>
+            <button onClick={() => setTimeRange('5min')}>5 Min</button>
           </div>
 
           <button className="downloadButton" onClick={handleDownload}>
