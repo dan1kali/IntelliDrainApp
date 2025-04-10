@@ -12,70 +12,6 @@ var socket = io('http://localhost:5000', {
   transports: ['websocket'],  // Use WebSocket transport for faster and more stable communication
 });
 
-/* function App() {
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    // Log when the socket is connected and disconnected
-    socket.on('connect', () => {
-      console.log('Socket connected');
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
-    });
-
-    // Listen for 'new_data' event from Flask server
-    socket.on('new_data', (receivedData) => {
-      console.log('Received data:', receivedData); // Debugging line
-      setData(receivedData);  // Update state with the new data
-    });
-
-    // Clean up the socket connection when the component is unmounted
-    return () => {
-      socket.off('new_data');
-      socket.off('connect');
-      socket.off('disconnect');
-    };
-  }, []);
-
-  return (
-    <div className="App">
-      <h1>Arduino Data</h1>
-      {data ? (
-        <p>Sensor Value: {data.sensor_value}</p>  // Only render if data is available
-      ) : (
-        <p>Waiting for data...</p>  // Fallback message while data is being fetched
-      )}
-    </div>
-  );
-} */
-
-
-
-
-  /* const chartOptions = {
-    responsive: true,
-    scales: {
-      x: {
-        type: 'category',
-        title: {
-          display: true,
-          text: 'Time',
-        },
-      },
-      y: {
-        title: {
-          display: true,
-          text: 'Sensor Value',
-        },
-        ticks: {
-          beginAtZero: true,
-        },
-      },
-    },
-  }; */
-
 
 function App() {
   const [data, setData] = useState({
@@ -112,29 +48,6 @@ function App() {
       ]);
     });
 
-
-    /* For debugging */
-    /* socket.on('new_data', (receivedData) => {
-      console.log('Received data:', receivedData);
-      setData((prevData) => {
-        const newData = {
-          ...prevData,
-          salineVolume: receivedData.saline_volume,
-          drainageVolume: receivedData.drainage_volume,
-          flushTimes: [...prevData.flushTimes, receivedData.flush_times],
-          sensorValues: [...prevData.sensorValues, receivedData.sensor_value],
-        };
-        console.log('Updated data:', newData);  // Check the updated state here
-        return newData;
-      });
-      
-      setLabels((prevLabels) => [
-        ...prevLabels,
-        new Date(receivedData.date).toLocaleTimeString(),
-      ]);
-    }); */
-    
-    
     return () => {
       socket.off('new_data');
       socket.off('connect');
