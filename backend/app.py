@@ -65,21 +65,22 @@ def set_port():
     global ser, selected_port_mode
     data = request.get_json()
     selected_port = data.get('port')
-    print(f"SELECTED PORT IS: {selected_port}")
+    print(f"\n\nSELECTED PORT IS: {selected_port}\n\n")
     # Initialize serial connection
     # ser = serial.Serial('/dev/cu.usbmodem14101', 9600)
     if selected_port == "random":
         selected_port_mode = "random"
         ser = None  # Just in case
-        print("Switched to Random mode")
+        print("\n\nSwitched to Random mode\n\n")
         return jsonify({"message": "Switched to Random data mode"}), 200
     else:
         try:
             ser = serial.Serial(selected_port, 9600, timeout=1)
             selected_port_mode = "serial"
-            print(f"Connected to {selected_port}")
+            print(f"\n\nConnected to {selected_port}\n\n")
             return jsonify({"message": f"Connected to {selected_port}"}), 200
         except Exception as e:
+            print(f"\n\nError for some reason\n\n")
             return jsonify({"error": str(e)}), 500
 
 
@@ -93,48 +94,39 @@ def get_data():
                 "drainage_volume": get_fluid_tracking_values()[1],
                 "flush_times": get_flush_initiation_times()}
     else:
-        try:
-            line = ser.readline().decode('utf-8').strip()
-            print(f"Serial raw: {line}")
+        # print(ser)
+        line = ser.readline().decode('utf-8').strip()
+        print(f"\nSerial raw: {line}\n")
 
-            values = line.split(',')
-            if len(values) == 5:
-                return {
-                    'time_ms': int(values[0]),
-                    'sensor_value': int(values[1]),
-                    'saline_volume': int(values[2]),
-                    'drainage_volume': int(values[3]),
-                    'flush_times': int(values[4]),
-                    'date': get_current_datetime()
-                }
-            else:
-                print("Unexpected number of values.")
-                return {
-                        'time_ms': 1,
-                        'sensor_value': 1,
-                        'saline_volume': 1,
-                        'drainage_volume': 1,
-                        'flush_times': 1,
-                        'date': get_current_datetime()}
-        except Exception as e:
-            print(f"Error parsing serial data: {e}")
-            return {'time_ms': 1,
-                    'sensor_value': 1,
-                    'saline_volume': 1,
-                    'drainage_volume': 1,
-                    'flush_times': 1,
-                    'date': get_current_datetime()}
+        values = line.split(',')
+        if len(values) == 5:
+            return {
+                'time_ms': float(values[0]),
+                'sensor_value': float(values[1]),
+                'saline_volume': float(values[2]),
+                'drainage_volume': float(values[3]),
+                'flush_times': int(values[4]),
+                'date': get_current_datetime()
+            }
+        else:
+            print("Unexpected number of values.")
+            return None
 
 
 
 # Background thread that sends sensor data to clients
 def background_thread():
-    print("Background thread started", flush=True)  # Add logging here to verify the thread is running
+    print("Background thread started", flush=True)
     while True:
         data = get_data()
-        print(f"Emitting data: {data}")  # Log emitted data to the console for debugging
-        socketio.emit('new_data', data)
-        socketio.sleep(1)  # Emit data every second
+        if data:  # Only emit if data is valid (not None)
+            print(f"Emitting data: {data}")
+            socketio.emit('new_data', data)
+        socketio.sleep(1)
+    else:
+        print("Skipped emitting due to malformed data")
+
+
 
 # Serve the root index file
 @app.route('/')
