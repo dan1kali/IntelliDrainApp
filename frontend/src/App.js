@@ -40,39 +40,64 @@ function App() {
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
     });
+  
+/*     socket.on('new_data', (receivedData) => {
+      if (status === 'started') {
+        console.log('Received data:', receivedData);
+        
+        // Update the state with the received data
+        setData((prevData) => {
+          const firstSalineVolume = prevData.salineVolumes[0] || receivedData.saline_volume;
+          const salineVolumeDifference = receivedData.saline_volume - firstSalineVolume;
+  
+          return {
+            ...prevData,
+            salineVolumes: [...prevData.salineVolumes, salineVolumeDifference],
+            drainageVolumes: [...prevData.drainageVolumes, receivedData.drainage_volume],
+            flushTimes: [...prevData.flushTimes, receivedData.flush_times],
+            sensorValues: [...prevData.sensorValues, receivedData.sensor_value],
+          };
+        });
+  
+        // Update the timestamps state
+        setTimestamps((prevTimestamps) => [
+          ...prevTimestamps,
+          new Date(receivedData.date),
+        ]);
+      }
+    }); */
 
 
     socket.on('new_data', (receivedData) => {
       if (status === 'started') {
         console.log('Received data:', receivedData);
     
+        // Update the state with the received data
         setData((prevData) => {
-          const flushTime = receivedData.flush_times === 1 ? new Date() : null;
-    
-          const previousSalineVolumeArray = prevData.salineVolumes || [];
-          const lastValue = previousSalineVolumeArray.length > 0 ? previousSalineVolumeArray[previousSalineVolumeArray.length - 1] : 0;
-          const newValue = receivedData.flush_times === 1 ? lastValue + 10 : lastValue;
+          const firstSalineVolume = prevData.salineVolumes.length > 0 ? prevData.salineVolumes[0] : receivedData.saline_volume;
+          //console.log('First saline volume:', firstSalineVolume);
+          const salineVolumeDifference = receivedData.saline_volume - firstSalineVolume;
+          //console.log('Saline volume difference:', salineVolumeDifference);
 
-          const lastDrainageValue = prevData.drainageVolumes.length > 0 ? prevData.drainageVolumes[prevData.drainageVolumes.length - 1] : 0;
-          const newDrainageValue = Math.max(0, lastDrainageValue + 1);  // Ensure it doesn't go below 0    
+          // Record flush time if a 1 is returned
+          const flushTime = receivedData.flush_times === 1 ? new Date() : null;
 
           return {
             ...prevData,
-            salineVolumes: [...previousSalineVolumeArray, newValue],
-            drainageVolumes: [...prevData.drainageVolumes, newDrainageValue],
+            salineVolumes: [...prevData.salineVolumes, receivedData.saline_volume],  // Store actual saline volume
+            drainageVolumes: [...prevData.drainageVolumes, receivedData.drainage_volume],
             flushTimes: [flushTime, ...prevData.flushTimes],
             sensorValues: [...prevData.sensorValues, receivedData.sensor_value],
           };
         });
     
+        // Update the timestamps state
         setTimestamps((prevTimestamps) => [
           ...prevTimestamps,
           new Date(receivedData.date),
         ]);
       }
     });
-    
-    
     
   
     // Cleanup the socket event listeners when the component unmounts or the status changes
@@ -318,7 +343,7 @@ function App() {
       y: {
         title: {
           display: true,
-          text: 'Fluid Force Value (g)',
+          text: 'Occlusion Sensor Value',
           color: 'rgba(17, 56, 100, 1)',
         },
         ticks: {
@@ -540,7 +565,7 @@ function App() {
 
         <div className="rightColumn">
           <div className="chartContainer">
-            <h3>Occlusion Sensor Output</h3>
+            <h3>Sensor Output</h3>
             <Line data={chartData} options={chartOptions} />
             <div className="timeRangeButtons">
               <button onClick={() => setTimeRange('all')}>All Time</button>
