@@ -15,7 +15,6 @@
 }
 
 h1 {
-<<<<<<< HEAD
   text-align: center;
   margin-bottom: 50px; /* Add 20px space below the title */
 }
@@ -39,10 +38,6 @@ h1 {
 
 .volume-display {
   margin-bottom: 1rem;
-=======
-  margin: 0 auto;
-  text-align: center;
->>>>>>> ec43838daba7a4ce1c0e21115d898bf1031ca8e5
 }
 
 .layoutContainer {
