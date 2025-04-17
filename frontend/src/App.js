@@ -86,7 +86,7 @@ function App() {
             ...prevData,
             salineVolumes: [...prevData.salineVolumes, receivedData.saline_volume],  // Store actual saline volume
             drainageVolumes: [...prevData.drainageVolumes, receivedData.drainage_volume],
-            flushTimes: [...prevData.flushTimes, flushTime],
+            flushTimes: [flushTime, ...prevData.flushTimes],
             sensorValues: [...prevData.sensorValues, receivedData.sensor_value],
           };
         });
@@ -189,45 +189,82 @@ function App() {
   };
 
   const handleDownload = () => {
-    // Format the data as CSV
-    // First print patient data
     const patientInfo = [
       ['Patient Name', patientData.name || 'N/A'],
       ['Sex', patientData.sex || 'N/A'],
       ['Notes', patientData.notes || 'N/A'],
     ];
-
-    const blankRow = ['', '', '', '', '', ''];
-    const header = ['Date', 'Timestamp', 'Saline Volume', 'Drainage Volume', 'Sensor Value', '', 'Flush Date/Times']; // CSV Header
-    const rows = data.salineVolumes.map((salineVolume, index) => [
-      timestamps[index].toLocaleString(), // Timestamp formatted as a string
-      salineVolume,
-      data.drainageVolumes[index],
-      data.sensorValues[index],
-      [],
-      data.flushTimes[index].toLocaleString(),
-
-    ]);
   
-    const csvContent = [patientInfo, blankRow, header, rows]
+    const blankRow = [];
+  
+    const header = [
+      'Date',
+      'Time',
+      'Saline Volume',
+      'Drainage Volume',
+      'Sensor Value',
+      '', // Spacer column
+      'Flush Date',
+      'Flush Time',
+    ];
+  
+    // Prepare main sensor data rows
+    const dataRows = data.salineVolumes.map((salineVolume, index) => {
+      const timestamp = timestamps[index];
+      const date = timestamp ? timestamp.toLocaleDateString() : '';
+      const time = timestamp ? timestamp.toLocaleTimeString() : '';
+  
+      return [
+        date,
+        time,
+        salineVolume,
+        data.drainageVolumes[index],
+        data.sensorValues[index],
+      ];
+    });
+  
+    // Prepare flush time rows (no alignment)
+    const flushRows = data.flushTimes
+      .filter(flush => flush !== null)
+      .map(flush => [
+        flush.toLocaleDateString(),
+        flush.toLocaleTimeString(),
+      ]);
+  
+    // Determine the max number of rows needed
+    const maxRows = Math.max(dataRows.length, flushRows.length);
+  
+    // Merge dataRows and flushRows into a single table with spacing
+    const mergedRows = Array.from({ length: maxRows }).map((_, i) => {
+      const dataRow = dataRows[i] || ['', '', '', '', ''];
+      const flushRow = flushRows[i] || ['', ''];
+      return [...dataRow, '', ...flushRow]; // Insert blank column in between
+    });
+  
+    const csvContent = [
+      patientInfo,
+      blankRow,
+      header,
+      ...mergedRows,
+    ]
       .map(row => row.join(','))
       .join('\n');
-
-    // Create a Blob from the CSV content
+  
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   
-    // Create an invisible download link
     const link = document.createElement('a');
-    if (link.download !== undefined) { // Check if the browser supports download attribute
+    if (link.download !== undefined) {
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', 'data.csv'); // The name of the file
-      link.style.visibility = 'hidden'; // Hide the link
+      link.setAttribute('download', 'data.csv');
+      link.style.visibility = 'hidden';
       document.body.appendChild(link);
-      link.click(); // Trigger the download
-      document.body.removeChild(link); // Clean up
+      link.click();
+      document.body.removeChild(link);
     }
   };
+  
+  
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -439,50 +476,55 @@ function App() {
                 <div className="volume-display">
                   <div className="big-bold">
                     <span className="number">
-                  {((data.drainageVolumes[data.drainageVolumes.length - 1] - data.drainageVolumes[data.drainageVolumes.length - 86400]) -
-                    (data.salineVolumes[data.salineVolumes.length - 1] - data.salineVolumes[data.salineVolumes.length - 86400])).toFixed(1)} 
+                      {(
+                        (data.drainageVolumes[data.drainageVolumes.length - 1] - data.drainageVolumes[data.drainageVolumes.length - 86400]) -
+                        (data.salineVolumes[data.salineVolumes.length - 1] - data.salineVolumes[data.salineVolumes.length - 86400])
+                      ).toFixed(1)}
                     </span>
                     <span className="unit">cc</span>
-
                   </div>
                   <div className="label">Net Drainage</div>
 
-                  <p className="grey-text">
-                    {(
-                      data.drainageVolumes[data.drainageVolumes.length - 1] -
-                      data.drainageVolumes[data.drainageVolumes.length - 86400]
-                    ).toFixed(1) || '0.0'} cc Drained
-                  </p>
-                  <p className="grey-text">
-                    {(
-                      data.salineVolumes[data.salineVolumes.length - 1] -
-                      data.salineVolumes[data.salineVolumes.length - 86400]
-                    ).toFixed(1) || '0.0'} cc Flushed
-                  </p>
+                  <div className="amounts-container">
+                    <p className="grey-text">
+                      {(
+                        data.drainageVolumes[data.drainageVolumes.length - 1] -
+                        data.drainageVolumes[data.drainageVolumes.length - 86400]
+                      ).toFixed(1) || '0.0'} cc Drained
+                    </p>
+                    <p className="grey-text">
+                      {(
+                        data.salineVolumes[data.salineVolumes.length - 1] -
+                        data.salineVolumes[data.salineVolumes.length - 86400]
+                      ).toFixed(1) || '0.0'} cc Flushed
+                    </p>
+                  </div>
                 </div>
-               
               </>
             ) : (
               <>
                 <div className="volume-display">
                   <div className="big-bold">
-                  {((data.drainageVolumes?.[data.drainageVolumes.length - 1] ?? 0) -
-                  (data.salineVolumes?.[data.salineVolumes.length - 1] ?? 0)).toFixed(1)} cc
+                    {(
+                      (data.drainageVolumes?.[data.drainageVolumes.length - 1] ?? 0) -
+                      (data.salineVolumes?.[data.salineVolumes.length - 1] ?? 0)
+                    ).toFixed(1)} cc
                   </div>
                   <div className="label">Net Volume Drained</div>
 
-                  <p className="grey-text">
-                    {data.drainageVolumes[data.drainageVolumes.length - 1]?.toFixed(1) || '0.0'} cc Drained
-                  </p>
-                  <p className="grey-text">
-                    {data.salineVolumes[data.salineVolumes.length - 1]?.toFixed(1) || '0.0'} cc Flushed
-                  </p>
-
+                  <div className="amounts-container">
+                    <p className="grey-text">
+                      {data.drainageVolumes[data.drainageVolumes.length - 1]?.toFixed(1) || '0.0'} cc Drained
+                    </p>
+                    <p className="grey-text">
+                      {data.salineVolumes[data.salineVolumes.length - 1]?.toFixed(1) || '0.0'} cc Flushed
+                    </p>
+                  </div>
                 </div>
-
               </>
             )}
           </div>
+
 
           <div className="dataDisplay">
             <h3>Cumulative to Date</h3>
@@ -492,17 +534,32 @@ function App() {
                 (data.salineVolumes?.[data.salineVolumes.length - 1] ?? 0)).toFixed(1)} cc
               </div>
               <div className="label">Net Volume Drained</div>
+              <div className="amounts-container">
 
-              <p className="grey-text">
-                {data.drainageVolumes[data.drainageVolumes.length - 1]?.toFixed(1) || '0.0'} cc Drained
-              </p>
-              <p className="grey-text">
-                {data.salineVolumes[data.salineVolumes.length - 1]?.toFixed(1) || '0.0'} cc Flushed
-              </p>
-
+                <p className="grey-text">
+                  {data.drainageVolumes[data.drainageVolumes.length - 1]?.toFixed(1) || '0.0'} cc Drained
+                </p>
+                <p className="grey-text">
+                  {data.salineVolumes[data.salineVolumes.length - 1]?.toFixed(1) || '0.0'} cc Flushed
+                </p>
+              </div>
             </div>
 
           </div>
+
+          <div className="scrollingData">
+            <h3>Flushing Timestamps</h3>
+            <div className="timestampsContainer">
+              {data.flushTimes.map((flushTime, index) =>
+                flushTime ? (
+                  <p key={index}>{flushTime.toLocaleString()}</p>
+                ) : null
+              )}
+            </div>
+          </div>
+
+
+
         </div>
 
 

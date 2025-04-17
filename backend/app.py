@@ -111,6 +111,13 @@ def get_data():
         else:
             print("Unexpected number of values.")
             return None
+            """ return {
+                'time_ms': 1,
+                'sensor_value': 1,
+                'saline_volume': 1,
+                'drainage_volume': 1,
+                'flush_times': 1,
+                'date': 1 } """
 
 
 
