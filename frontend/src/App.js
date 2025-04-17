@@ -1,5 +1,4 @@
 import './App.css';
-
 import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import { Line } from 'react-chartjs-2';
@@ -11,13 +10,12 @@ var socket = io('http://localhost:5000', {
   transports: ['websocket'],  // Use WebSocket transport for faster and more stable communication
 });
 
-
 function App() {
   const [data, setData] = useState({
     salineVolumes: [],
     drainageVolumes: [],
     flushTimes: [],
-    sensorValues: [],  // Make sure this is an array
+    sensorValues: [],
   });
 
   const [timestamps, setTimestamps] = useState([]);
@@ -31,55 +29,213 @@ function App() {
     notes: '',
   });
 
+  const [showStopPrompt, setShowStopPrompt] = useState(false); // State for stop prompt
+  const [isDataSaving, setIsDataSaving] = useState(false); // Flag for data saving in process
+
   useEffect(() => {
+    // Establish socket event listeners when the component mounts
     socket.on('connect', () => {
       console.log('Socket connected');
     });
-
+  
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
     });
+  
+/*     socket.on('new_data', (receivedData) => {
+      if (status === 'started') {
+        console.log('Received data:', receivedData);
+        
+        // Update the state with the received data
+        setData((prevData) => {
+          const firstSalineVolume = prevData.salineVolumes[0] || receivedData.saline_volume;
+          const salineVolumeDifference = receivedData.saline_volume - firstSalineVolume;
+  
+          return {
+            ...prevData,
+            salineVolumes: [...prevData.salineVolumes, salineVolumeDifference],
+            drainageVolumes: [...prevData.drainageVolumes, receivedData.drainage_volume],
+            flushTimes: [...prevData.flushTimes, receivedData.flush_times],
+            sensorValues: [...prevData.sensorValues, receivedData.sensor_value],
+          };
+        });
+  
+        // Update the timestamps state
+        setTimestamps((prevTimestamps) => [
+          ...prevTimestamps,
+          new Date(receivedData.date),
+        ]);
+      }
+    }); */
+
 
     socket.on('new_data', (receivedData) => {
-      console.log('Received data:', receivedData);
-      setData((prevData) => ({
-        ...prevData, // Retain the previous data
-        salineVolumes: [...prevData.salineVolumes, receivedData.saline_volume], // Append the new sensor value to the array
-        drainageVolumes: [...prevData.drainageVolumes, receivedData.drainage_volume], // Append the new sensor value to the array
-        flushTimes: [...prevData.flushTimes, receivedData.flush_times],
-        sensorValues: [...prevData.sensorValues, receivedData.sensor_value], // Append the new sensor value to the array
-      }));
-      
-      setTimestamps((prevTimestamps) => [
-        ...prevTimestamps,
-        new Date(receivedData.date),
-      ]);
-    });
+      if (status === 'started') {
+        console.log('Received data:', receivedData);
+    
+        // Update the state with the received data
+        setData((prevData) => {
+          const firstSalineVolume = prevData.salineVolumes.length > 0 ? prevData.salineVolumes[0] : receivedData.saline_volume;
+          //console.log('First saline volume:', firstSalineVolume);
+          const salineVolumeDifference = receivedData.saline_volume - firstSalineVolume;
+          //console.log('Saline volume difference:', salineVolumeDifference);
 
+          // Record flush time if a 1 is returned
+          const flushTime = receivedData.flush_times === 1 ? new Date() : null;
+
+          return {
+            ...prevData,
+            salineVolumes: [...prevData.salineVolumes, receivedData.saline_volume],  // Store actual saline volume
+            drainageVolumes: [...prevData.drainageVolumes, receivedData.drainage_volume],
+            flushTimes: [...prevData.flushTimes, flushTime],
+            sensorValues: [...prevData.sensorValues, receivedData.sensor_value],
+          };
+        });
+    
+        // Update the timestamps state
+        setTimestamps((prevTimestamps) => [
+          ...prevTimestamps,
+          new Date(receivedData.date),
+        ]);
+      }
+    });
+    
+  
+    // Cleanup the socket event listeners when the component unmounts or the status changes
     return () => {
       socket.off('new_data');
       socket.off('connect');
       socket.off('disconnect');
     };
-  }, []);
+  }, [status]);  // Effect depends on `status`
+  
 
-  const handleStart = () => {
-    setStatus('started');  // Update status to 'started'
-    // Add any start logic here (like initiating data fetching or starting a process)
+
+
+
+  const [ports, setPorts] = useState([]);
+  const [selectedPort, setSelectedPort] = useState('');
+
+  // useEffect to fetch ports when the component mounts
+  useEffect(() => {
+    fetch('http://localhost:5000/api/ports')
+      .then((res) => res.json())
+      .then((data) => setPorts(data))
+      .catch((err) => {
+        console.error('Error fetching ports:', err);
+      });
+  }, []);  // Empty dependency array to run only on mount
+
+  const handleSelect = () => {
+    fetch('http://localhost:5000/api/set_port', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port: selectedPort }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('Port set response:', data);
+      })
+      .catch((err) => {
+        console.error('Error setting port:', err);
+      });
   };
 
-  const handlePause = () => {
+
+  const handleStartButton = () => {
+    setStatus('started');  // Update status to 'started' to start collecting data from socket
+  };
+
+  const handlePauseButton = () => {
+    setStatus('paused');  // Update status to 'paused' to pause data collection, but socket is still connected
+  };
+
+  const handleStopButton = () => {
     setStatus('paused');  // Update status to 'paused'
-    // Add any pause logic here (like pausing data fetching or halting a process)
+    setShowStopPrompt(true);  // Show prompt when stopping
   };
 
-  const handleStop = () => {
-    setStatus('stopped');  // Update status to 'stopped'
-    // Add any stop logic here (like stopping data fetching or halting a process)
+  const handleCancelData = () => {
+    setShowStopPrompt(false); // Hide the stop prompt without clearing data
+    setStatus('paused');
   };
-  // Handle Download Button click
+
+  const handleSaveData = async () => {
+    setIsDataSaving(true);
+    await handleDownload(); 
+  
+    setData({
+      salineVolumes: [],
+      drainageVolumes: [],
+      flushTimes: [],
+      sensorValues: [],
+    });
+    setTimestamps([]);
+    setStatus('stopped');
+    setShowStopPrompt(false);
+  
+    setIsDataSaving(false);
+  };
+
+  const handleDontSaveData = () => {
+    setStatus('stopped'); // Simply stop without clearing data
+    setData({
+      salineVolumes: [],
+      drainageVolumes: [],
+      flushTimes: [],
+      sensorValues: [],
+    });
+    setTimestamps([]);
+    setShowStopPrompt(false);
+  };
+
   const handleDownload = () => {
-    // Add your download logic here, like generating a file to download
+    // Format the data as CSV
+    // First print patient data
+    const patientInfo = [
+      ['Patient Name', patientData.name || 'N/A'],
+      ['Sex', patientData.sex || 'N/A'],
+      ['Notes', patientData.notes || 'N/A'],
+    ];
+
+    const blankRow = ['', '', '', '', '', ''];
+    const header = ['Date', 'Timestamp', 'Saline Volume', 'Drainage Volume', 'Sensor Value', '', 'Flush Date/Times']; // CSV Header
+    const rows = data.salineVolumes.map((salineVolume, index) => [
+      timestamps[index].toLocaleString(), // Timestamp formatted as a string
+      salineVolume,
+      data.drainageVolumes[index],
+      data.sensorValues[index],
+      [],
+      data.flushTimes[index].toLocaleString(),
+
+    ]);
+  
+    const csvContent = [patientInfo, blankRow, header, rows]
+      .map(row => row.join(','))
+      .join('\n');
+
+    // Create a Blob from the CSV content
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  
+    // Create an invisible download link
+    const link = document.createElement('a');
+    if (link.download !== undefined) { // Check if the browser supports download attribute
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'data.csv'); // The name of the file
+      link.style.visibility = 'hidden'; // Hide the link
+      document.body.appendChild(link);
+      link.click(); // Trigger the download
+      document.body.removeChild(link); // Clean up
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setPatientData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
   };
 
   const getFilteredChartData = () => {
@@ -115,15 +271,13 @@ function App() {
       data: filteredValues,
     };
   };
-  
 
   const filteredData = getFilteredChartData();
 
   const chartData = {
     labels: filteredData.labels,
     datasets: [
-      {
-        data: filteredData.data,
+      { data: filteredData.data,
         borderColor: 'rgb(192, 47, 69)',
         backgroundColor: 'rgba(255, 182, 193, 0.4)',
         fill: true,
@@ -140,48 +294,39 @@ function App() {
         title: {
           display: true,
           text: 'Time',
-          color: 'rgba(106, 90, 205, 1)',  // Text purple full opacity
+          color: 'rgba(17, 56, 100, 1)',
         },
         ticks: {
-          color: 'rgba(106, 90, 205, 1)',  // Tick mark color (purple)
+          color: 'rgba(17, 56, 100, 1)',
           maxTicksLimit: 10,
         },
         grid: {
-          color: 'rgba(216, 191, 216, 0.5)',  // Grid lines lavender, transparent
+          color: 'rgba(216, 191, 216, 0.5)',
         },
       },
       y: {
         title: {
           display: true,
           text: 'Occlusion Sensor Value',
-          color: 'rgba(106, 90, 205, 1)',  // Soft purple for axis title
+          color: 'rgba(17, 56, 100, 1)',
         },
         ticks: {
-          color: 'rgba(106, 90, 205, 1)',  // Soft purple for tick marks
+          color: 'rgba(17, 56, 100, 1)',
         },
         grid: {
-          color: 'rgba(216, 191, 216, 0.5)',  // Light lavender grid lines with transparency
+          color: 'rgba(216, 191, 216, 0.5)',
         },
       },
     },
     plugins: {
       legend: {
-          display: false,  // Soft purple for legend text
+        display: false,
       },
       tooltip: {
-        titleColor: 'rgba(106, 90, 205, 1)',  // Soft purple for tooltip title
-        bodyColor: 'rgba(106, 90, 205, 1)',   // Soft purple for tooltip body text
+        titleColor: 'rgba(222, 236, 252, 1)',
+        bodyColor: 'rgba(222, 236, 252, 1)',
       },
     },
-  };
-
-  // Handle changes to patient data
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setPatientData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
   };
 
   return (
@@ -192,6 +337,60 @@ function App() {
 
         <div className="leftColumn">
 
+          {/* <div className="controlsContainer">
+            <label htmlFor="device-select">Select Device: </label>
+            <select id="device-select">
+              <option value="device1">Device 1</option>
+              <option value="device2">Device 2</option>
+              <option value="device3">Device 3</option>
+            </select>
+          </div> */}
+
+
+          <div className="controlsContainer">
+            <label htmlFor="device-select">Select Port: </label>
+            <select
+              id="device-select"
+              value={selectedPort}
+              onChange={(e) => setSelectedPort(e.target.value)}
+            >
+              <option value="">Select a port</option>
+
+              {/* Add random option */}
+              <option value="random">Random</option>
+
+
+              {ports.map((port) => (
+                <option key={port} value={port}>
+                  {port}
+                </option>
+              ))}
+            </select>
+            <button onClick={handleSelect} disabled={!selectedPort}>
+              Connect
+            </button>
+
+            {/* Button to manually rescan ports */}
+            <button
+              onClick={() => {
+                fetch('http://localhost:5000/api/ports')
+                  .then((res) => res.json())
+                  .then((data) => setPorts(data))
+                  .catch((err) => {
+                    console.error('Error fetching ports:', err);
+                  });
+              }}
+            >
+              Rescan Ports
+            </button>
+          </div>
+
+
+          <div className="controlsContainer">
+            <button onClick={handleStartButton} disabled={status === 'started'}>Start</button>
+            <button onClick={handlePauseButton} disabled={status !== 'started'}>Pause</button>
+            <button onClick={handleStopButton} disabled={status === 'stopped'}>Stop</button>
+          </div>
 
           <div className="patientDataContainer">
             <h3>Patient Data</h3>
@@ -212,15 +411,13 @@ function App() {
                 value={patientData.sex}
                 onChange={handleInputChange}
               >
-                <option value="">Select Sex</option>
+                <option value="">Select</option>
                 <option value="male">M</option>
                 <option value="female">F</option>
-                <option value="other">Other</option>
               </select>
             </div>
 
             <div className="formGroup">
-
               <label>Notes: </label>
               <textarea
                 name="notes"
@@ -228,66 +425,116 @@ function App() {
                 onChange={handleInputChange}
               />
             </div>
-              
-          </div>
-
-          <div className="controlsContainer">
-            <label htmlFor="device-select">Select Device: </label>
-            <select id="device-select">
-              <option value="device1">Device 1</option>
-              <option value="device2">Device 2</option>
-              <option value="device3">Device 3</option>
-            </select>
-          </div>
-
-          <div className="controlsContainer">
-            <button onClick={handleStart} disabled={status === 'started'}>Start</button>
-            <button onClick={handlePause} disabled={status !== 'started'}>Pause</button>
-            <button onClick={handleStop} disabled={status === 'stopped'}>Stop</button>
           </div>
 
           <button className="downloadButton" onClick={handleDownload}>
             Download Data
           </button>
+
         </div>
 
         <div className="centerColumn">
           <div className="dataDisplay">
             <h3>Last 24 Hours</h3>
-            <p>Net Volume Drained: {(data.drainageVolumes[data.drainageVolumes.length - 1] - data.salineVolumes[data.salineVolumes.length - 1]).toFixed(2)}</p>
-            <p>Total Drainage: {data.drainageVolumes[data.drainageVolumes.length - 1]}</p>
-            <p>Total Flush: {data.salineVolumes[data.salineVolumes.length - 1]}</p>
+            {data.drainageVolumes.length > 86400 && data.salineVolumes.length > 86400 ? (
+              <>
+                <div className="volume-display">
+                  <div className="big-bold">
+                    <span className="number">
+                  {((data.drainageVolumes[data.drainageVolumes.length - 1] - data.drainageVolumes[data.drainageVolumes.length - 86400]) -
+                    (data.salineVolumes[data.salineVolumes.length - 1] - data.salineVolumes[data.salineVolumes.length - 86400])).toFixed(1)} 
+                    </span>
+                    <span className="unit">cc</span>
+
+                  </div>
+                  <div className="label">Net Drainage</div>
+
+                  <p className="grey-text">
+                    {(
+                      data.drainageVolumes[data.drainageVolumes.length - 1] -
+                      data.drainageVolumes[data.drainageVolumes.length - 86400]
+                    ).toFixed(1) || '0.0'} cc Drained
+                  </p>
+                  <p className="grey-text">
+                    {(
+                      data.salineVolumes[data.salineVolumes.length - 1] -
+                      data.salineVolumes[data.salineVolumes.length - 86400]
+                    ).toFixed(1) || '0.0'} cc Flushed
+                  </p>
+                </div>
+               
+              </>
+            ) : (
+              <>
+                <div className="volume-display">
+                  <div className="big-bold">
+                  {((data.drainageVolumes?.[data.drainageVolumes.length - 1] ?? 0) -
+                  (data.salineVolumes?.[data.salineVolumes.length - 1] ?? 0)).toFixed(1)} cc
+                  </div>
+                  <div className="label">Net Volume Drained</div>
+
+                  <p className="grey-text">
+                    {data.drainageVolumes[data.drainageVolumes.length - 1]?.toFixed(1) || '0.0'} cc Drained
+                  </p>
+                  <p className="grey-text">
+                    {data.salineVolumes[data.salineVolumes.length - 1]?.toFixed(1) || '0.0'} cc Flushed
+                  </p>
+
+                </div>
+
+              </>
+            )}
           </div>
 
           <div className="dataDisplay">
             <h3>Cumulative to Date</h3>
-            <p>Net Volume Drained: {(data.drainageVolumes[data.drainageVolumes.length - 1] - data.salineVolumes[data.salineVolumes.length - 1]).toFixed(2)}</p>
-            <p>Total Drainage: {data.drainageVolumes[data.drainageVolumes.length - 1]}</p>
-            <p>Total Flush: {data.salineVolumes[data.salineVolumes.length - 1]}</p>
-          </div>
+            <div className="volume-display">
+              <div className="big-bold">
+              {((data.drainageVolumes?.[data.drainageVolumes.length - 1] ?? 0) -
+                (data.salineVolumes?.[data.salineVolumes.length - 1] ?? 0)).toFixed(1)} cc
+              </div>
+              <div className="label">Net Volume Drained</div>
 
-          <div className="scrollingData">
-            <h3>Flushing Timestamps</h3>
-            {data.flushTimes.map((flushTime, index) => (
-              <p key={index}> {flushTime}</p>
-            ))}
+              <p className="grey-text">
+                {data.drainageVolumes[data.drainageVolumes.length - 1]?.toFixed(1) || '0.0'} cc Drained
+              </p>
+              <p className="grey-text">
+                {data.salineVolumes[data.salineVolumes.length - 1]?.toFixed(1) || '0.0'} cc Flushed
+              </p>
+
+            </div>
+
           </div>
         </div>
+
 
         <div className="rightColumn">
           <div className="chartContainer">
             <h3>Sensor Output</h3>
             <Line data={chartData} options={chartOptions} />
+            <div className="timeRangeButtons">
+              <button onClick={() => setTimeRange('all')}>All Time</button>
+              <button onClick={() => setTimeRange('24hr')}>24 Hours</button>
+              <button onClick={() => setTimeRange('1hr')}>1 Hour</button>
+              <button onClick={() => setTimeRange('5min')}>5 Min</button>
+            </div>
+
+
           </div>
 
-          <div className="timeRangeButtons">
-            <button onClick={() => setTimeRange('all')}>All Time</button>
-            <button onClick={() => setTimeRange('24hr')}>24 Hours</button>
-            <button onClick={() => setTimeRange('1hr')}>1 Hour</button>
-            <button onClick={() => setTimeRange('5min')}>5 Min</button>
-          </div>
+
         </div>
+
       </div>
+
+      {showStopPrompt && (
+        <div className="stopPrompt">
+          <p>Do you want to save the data before stopping?</p>
+          <button onClick={handleCancelData}>Cancel</button>
+          <button onClick={handleSaveData} disabled={isDataSaving}>Save</button>
+          <button onClick={handleDontSaveData}>Don't Save</button>
+        </div>
+      )}
     </div>
   );
 }

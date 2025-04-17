@@ -1,10 +1,10 @@
 .App {
   text-align: center;
-  background-color: #f5e4e6;  /* Light pink background */
+  /* background-color: #f5e4e6; */  /* Light pink background */
+  background-color: #f0f8fc;  /* Light blue background */
   min-height: 100vh;  /* Full height of the viewport */
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* Align at the top */
   flex-direction: column;
   padding: 20px;
   padding-top: 0; /* Remove any top padding */
@@ -16,6 +16,28 @@
 
 h1 {
   text-align: center;
+  margin-bottom: 50px; /* Add 20px space below the title */
+}
+
+.grey-text {
+  color: rgba(0, 0, 0, 0.5); /* This makes it 30% dark */
+}
+
+.big-bold {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #000; /* optional: tweak color */
+  line-height: 1.2;
+}
+
+.label {
+  font-size: 1rem;
+  color: #555;
+  margin-top: 0.5rem;
+}
+
+.volume-display {
+  margin-bottom: 1rem;
 }
 
 .layoutContainer {
@@ -29,7 +51,7 @@ h1 {
   margin-right: 20px; /* Space between the left and center columns */
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .centerColumn {
@@ -64,6 +86,7 @@ h1 {
   width: 100%;
   height: 50%; /* Adjust as needed */
   padding: 30px; /* Padding inside the chart container */
+  margin-bottom: 20px;    /* Space between form groups */
   background-color: white; /* White background for the chart area */
   display: flex;
   flex-direction: column; /* Stack elements inside the chart container */
@@ -98,8 +121,6 @@ textarea {
   height: 100px;          /* Set height for the notes textarea */
 }
 
-
-
 .scrollingData {
   width: 100%;
   height: 200px;
@@ -110,17 +131,20 @@ textarea {
   box-sizing: border-box;
   background-color: #fff;
   border-radius: 30px;
+  flex-direction: column-reverse; /* Makes the new items appear at the top */
 }
 
 .dataDisplay {
   width: 100%;
-  height: 200px;
+  height: 100%;
   margin-bottom: 10px;  /* Space between data displays */
   border: 1px solid #ccc;
   padding: 10px;
   box-sizing: border-box;
   background-color: #fff;
   border-radius: 30px;
+  text-align: left;
+  padding-left: 30px; /* Adjust this value as needed */
 }
 
 button {
@@ -131,14 +155,14 @@ button {
 }
 
 .controlsContainer {
-  margin-top: 20px;
+  margin-bottom: 20px;
   text-align: middle;
 }
 
 .downloadButton {
   margin-top: 20px;
   padding: 10px 20px;
-  background-color: #61dafb;
+  background-color: #459cb4;
   color: white;
   border: none;
   border-radius: 30px;
