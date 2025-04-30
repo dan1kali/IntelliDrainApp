@@ -51,7 +51,7 @@ function App() {
     
           const previousSalineVolumeArray = prevData.salineVolumes || [];
           const lastValue = previousSalineVolumeArray.length > 0 ? previousSalineVolumeArray[previousSalineVolumeArray.length - 1] : 0;
-          const newValue = receivedData.flush_times === 1 ? lastValue + 15 : lastValue;
+          const newValue = receivedData.flush_times === 1 ? lastValue + 10 : lastValue;
 
           const lastDrainageValue = prevData.drainageVolumes.length > 0 ? prevData.drainageVolumes[prevData.drainageVolumes.length - 1] : 0;
           const newDrainageValue = Math.max(0, lastDrainageValue + 1);  // Ensure it doesn't go below 0    
@@ -318,7 +318,7 @@ function App() {
       y: {
         title: {
           display: true,
-          text: 'Occlusion Sensor Value',
+          text: 'Fluid Force Value (g)',
           color: 'rgba(17, 56, 100, 1)',
         },
         ticks: {
@@ -540,7 +540,7 @@ function App() {
 
         <div className="rightColumn">
           <div className="chartContainer">
-            <h3>Sensor Output</h3>
+            <h3>Occlusion Sensor Output</h3>
             <Line data={chartData} options={chartOptions} />
             <div className="timeRangeButtons">
               <button onClick={() => setTimeRange('all')}>All Time</button>
